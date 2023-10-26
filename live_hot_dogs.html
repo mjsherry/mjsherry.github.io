@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js-->
+<script src="https://d3js.org/d3.v6.js"></script>
+
+<head>
+    <meta charset="utf-8">
+    <title>Data Story Article</title>
+    <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono" rel="stylesheet">
+    <style>
+        /* Add your CSS styles here */
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center; /* Center text in the body */
+        }
+
+        header, section {
+            margin: 0 auto; /* Center header and sections horizontally */
+            max-width: 800px; /* Limit maximum width to 800px or adjust as needed */
+            text-align: left; /* Reset text alignment for header and sections */
+        }
+
+        img {
+            display: block; /* Make the image a block-level element */
+            margin: 0 auto; /* Center the image horizontally */
+        }
+
+        
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1 style="text-align: center;">Nathan's 4th of July Hot Dog Eating Contest Over the Years</h1>
+        <p>The Nathan's Fourth of July Hot Dog Eating Contest is an iconic annual competitive eating event held in Coney Island, New York. It takes place on Independence Day, July 4th, and has become a highly anticipated tradition in the United States. Organized by Nathan's Famous, a renowned hot dog restaurant, the contest features professional eaters from around the world who compete to consume as many hot dogs and buns as they can within a 10-minute time limit.</p>
+        <p>The event is typically held in front of a large, enthusiastic crowd and has gained widespread media attention. Competitors, often including famous eaters like Joey Chestnut and Miki Sudo, strive to break the world record and claim the coveted Mustard Yellow Belt, which is awarded to the champion. The contest is a blend of athleticism and spectacle, as contestants employ various techniques to quickly devour the hot dogs, and the event is accompanied by lively commentary and entertainment. It has become a symbol of American celebration and gluttony, drawing thousands of spectators to witness this unique and entertaining tradition on America's birthday.</p>
+    </header>
+
+    <section>
+        <h2>Visualization 1: Scatter Plot</h2>
+        <div id="chart1"></div>
+        <p>The Nathan's Hot Dog Eating Contest has undergone significant changes since its inception, reflecting the evolving nature of competitive eating and the growth in popularity of the event. To illustrate these changes, we can visualize the contest's history with a line graph, with years on the x-axis and the number of hot dogs eaten on the y-axis. When you hover over a data point, it will display the name of the winner for that year, and clicking on the data point will highlight that winner's other victories. Please note that in this visualizations the female division that was started in 2011 has been removed for simplicity.</p>
+
+        <!-- Create a div to hold graph visualization -->
+        <div id="chart"></div>
+
+        <script>
+
+            // set dimensions and margins of the graph
+            const margin = {top: 50, right: 50, bottom: 50, left: 60},
+                    width = 800 - margin.left - margin.left,
+                    height = 600 - margin.top - margin.bottom;
+        
+            // appendhe svg object to the body of the page
+            const svg = d3.select("#chart1")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left}, ${margin.top})`);
+        
+            // Read da data
+            d3.csv("hotDogdata.csv", function(d){
+                return {
+                    winnderID: d["winnerID"],
+                    year: +d["year"],
+                    firstName: d["firstName"],
+                    lastName: d["lastName"],
+                    numberDogs: +d["numberDogs"],
+                    division: d["division"],
+                    newRecord: d["newRecord"]
+                };
+            }) .then( function(data){ 
+                console.log(data);
+        
+                //filter data
+                const filteredData = data.filter(d => d.division !== "F");
+
+
+                // add X axis
+                const x = d3.scaleLinear()
+                .domain([1970, d3.max(data, d => d.year)])
+                .range([0, width]);
+                svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "middle")
+                    .attr("x", width / 2) 
+                    .attr("y", height + 48)
+                    .style("font-size", "20px")
+                    .text("Year");
+        
+                // add Y axis
+                const y = d3.scaleLinear()
+                .domain([0, 80])
+                .range([height, 0]);
+                svg.append("text")
+                    .attr("class", "y-label")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -height / 2)
+                    .attr("y", -margin.left + 25) // Adjust the Y position as needed
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .text("Hot Dogs Eaten"); // Replace with your desired label
+        
+                svg.append("g")
+                .attr("transform", `translate(0, ${height})`)
+                .call(d3.axisBottom(x))
+        
+                // console.log(y)
+                svg.append("g")
+                .call(d3.axisLeft(y))
+        
+                // specify the tool tip
+                var tooltip = d3.select("#chart")
+                    .append("div")
+                    .style("position", "absolute")
+                    .style("visibility", "hidden")
+                    .style("background-color", "lightgrey")
+        
+                // add color scale
+                //const colorScale = d3.scaleOrdinal()
+                //    .domain(["M", "F"]) // Adjust these values based on your data
+                //    .range(["blue", "pink"]); // Define colors for each gender
+        
+                var size = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.numberDogs))
+                .range([1, 40])
+        
+                // add dots
+                svg.append("g")
+                .selectAll("dot")
+                .data(filteredData)
+                .join("circle")
+                    .attr("r", 5)
+                    .attr("cy", function (d) {return y(d.numberDogs); })
+                    .attr("cx", function (d) {return x(d.year); })
+                    .style("fill", "brown")
+                
+            
+                .on("click", function(e, d) {return d3.selectAll("circle")
+                                                        .style("opacity", function (d2) {
+                                                            if(d.winnderID == d2.winnderID) {
+                                                                return 1;
+                                                            } else {
+                                                                return 0.1;
+                                                            }
+                                                        })
+                                                        
+                
+                    })
+        
+                .on("mouseover", function(e, d) {
+                    tooltip.style("visibility", "visible")
+                        .html(`${d.firstName} ${d.lastName}`)
+                    
+                       
+                })
+        
+                .on("mousemove", function() {return tooltip.style("top", (+d3.select(this)
+                                                                .attr("cy")+550)+"px")
+                                                            .style("left", (+d3.select(this)
+                                                                .attr("cx")+250)+"px")})   
+                
+                .on("mouseout", function() {return tooltip.style("visibility", "hidden");})
+                
+                .on("mouseover", function(e, d) {
+                    // Change the dot's color on mouseover
+                    d3.select(this)
+                        .style("fill", "blue"); // Change to your desired color
+                
+                    // Show the tooltip with the existing behavior
+                    tooltip.style("visibility", "visible")
+                        .html(`${d.firstName} ${d.lastName}`);
+                })
+                .on("mouseout", function(e, d) {
+                    // Revert the dot's color to its original color on mouseout
+                    d3.select(this)
+                        .style("fill", "brown"); // Restore the original color
+                
+                    // Hide the tooltip with the existing behavior
+                    tooltip.style("visibility", "hidden");
+                });
+                
+            })
+        
+        </script>
+
+
+    </section>
+
+    <section>
+        <h2>Visualization 2: Bar Chart</h2>
+        <div id="chart2"></div>
+        <br>
+        <p>The bar chart presented here vividly illustrates the stark contrast between male and female champions in the Nathan's Hot Dog Eating Contest since the inception of the female division in 2011. The x-axis represents the years, and the y-axis quantifies the number of hot dogs consumed. In this visually striking representation, pink bars denote the female champions, while blue bars represent their male counterparts.</p>
+        <p>Across the years, the chart showcases a pattern of male domination in the contest. The blue bars consistently tower over the pink ones, signifying the substantial disparity in hot dog consumption between the genders. This data-driven display not only highlights the continued excellence of male champions but also underscores the potential for female competitors to challenge and close the gap in the future. It serves as a visual reminder of the evolving landscape of competitive eating and the exciting prospects for both male and female participants in the years to come.</p>
+
+        <script>
+            // Set dimensions and margins of the graph
+            const margin2 = { top: 50, right: 50, bottom: 50, left: 50 },
+                width2 = 800 - margin2.left - margin2.right,
+                height2 = 500 - margin2.top - margin2.bottom;
+        
+            // Append the SVG object to the body of the page
+            const svg2 = d3.select("#chart2")
+                .append("svg")
+                .attr("width", width2 + margin2.left + margin2.right)
+                .attr("height", height2 + margin2.top + margin2.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin2.left}, ${margin2.top})`);
+        
+            // Read the data
+            d3.csv("hotDogdata.csv", function(d) {
+                return {
+                    winnerID: d["winnerID"],
+                    year: +d["year"],
+                    firstName: d["firstName"],
+                    lastName: d["lastName"],
+                    numberDogs: +d["numberDogs"],
+                    division: d["division"],
+                    newRecord: d["newRecord"]
+                };
+            }).then(function(data) {
+                // Filter the data to include years from 2011 to 2023
+                data = data.filter(d => d.year >= 2011 && d.year <= 2023);
+        
+                // Create an array of years from 2011 to 2023
+                const years = Array.from({ length: 13 }, (_, i) => (2011 + i).toString());
+        
+                // Add X axis
+                const x = d3.scaleBand()
+                    .domain(years)
+                    .range([0, width2])
+                    .padding(0.2);
+        
+                svg2.append("g")
+                    .attr("transform", `translate(0, ${height2})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "translate(-10,0)rotate(-45)")
+                    .style("text-anchor", "end");
+        
+                svg2.append("text")
+                    .attr("x", width2 / 2)
+                    .attr("y", height2 + 50)
+                    .style("text-anchor", "end")
+                    .text("Year");
+        
+                // Add Y axis
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d.numberDogs)])
+                    .range([height2, 0]);
+        
+                svg2.append("g")
+                    .call(d3.axisLeft(y));
+        
+                svg2.append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 0 - margin2.left)
+                    .attr("x", 0 - height2 / 2)
+                    .attr("dy", "1em")
+                    .style("text-anchor", "middle")
+                    .text("Number of Dogs");
+        
+                // Specify the tooltip
+                var tooltip = d3.select("#chart2")
+                    .append("div")
+                    .style("position", "absolute")
+                    .style("visibility", "hidden")
+                    .style("background-color", "lightgrey");
+        
+                // Add bars
+                svg2.selectAll("mybar")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                    .attr("x", d => x(d.year.toString()) + (d.division === "M" ? 0 : x.bandwidth() / 2))
+                    .attr("y", d => y(d.numberDogs))
+                    .attr("width", x.bandwidth() / 2)
+                    .attr("height", d => height2 - y(d.numberDogs))
+                    .style("fill", d => (d.division === "M" ? "lightblue" : "pink"))
+        
+        
+                    .on("mouseover", function(e, d) {return tooltip.style("visibility", "visible")
+                                .html(`${d.firstName} ${d.lastName}: ` + d.numberDogs + " hot dogs");})
+        
+                    .on("mousemove", function() {return tooltip.style("top", d3.select(this)
+                                .attr("cy")+"px")
+                            .style("left", d3.select(this)
+                                .attr("cx")+"px")})   
+        
+                    .on("mouseout", function() {return tooltip.style("visibility", "hidden");})   
+
+                    .on("mouseover", function(e, d) {
+                        // Reduce the opacity of the bar to 50% on mouseover
+                        d3.select(this)
+                            .style("fill-opacity", 0.35);
+                    
+                        // Display the tooltip with the existing behavior
+                        tooltip.style("visibility", "visible")
+                            .html(`${d.firstName} ${d.lastName}: ${d.numberDogs} hot dogs`);
+                    })
+                    .on("mouseout", function(e, d) {
+                        // Restore the original opacity of the bar on mouseout
+                        d3.select(this)
+                            .style("fill-opacity", 1);
+                    
+                        // Hide the tooltip with the existing behavior
+                        tooltip.style("visibility", "hidden");
+                    });
+                    
+            });
+        </script>
+
+    </section>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    
+
+    <section>
+        <h2>Visualization 3: Data Comic</h2>
+        <br>
+        <img src="/590_f23/hot_dogs3.png" style="width: 70%; height: auto;">
+        
+
+        <p>The Nathan's Hot Dog Eating Contest has a rich history of shattered records, with contestants continuously pushing the boundaries of competitive eating. One remarkable period in the contest's evolution occurred between 2000 and 2001 when the record for hot dogs consumed doubled from 25 to an impressive 50. This significant jump highlighted the growing enthusiasm and competition in the field. Contestants were increasingly driven to outdo one another, exemplifying the relentless pursuit of excellence..</p>
+        <p>This trend of breaking records has continued throughout the years, demonstrating the unwavering determination of the competitive eaters and the growing popularity of the event. Among the standout competitors, Joey Chestnut's dominance in recent years has solidified his place in the annals of competitive eating history, serving as a testament to the sport's ongoing evolution and relentless ambition.</p>
+    </section>
+
+    <section>
+        <h2>Conclusion</h2>
+        <img src="/590_f23/nathans-hot-dog-contest-2017.png" style="width: 70%; height: auto;"">
+        <p>The Nathan's Hot Dog Eating Contest has transformed from a local curiosity in its early years to an internationally renowned spectacle. Visualized through a line graph showcasing the changing numbers of hot dogs consumed and a bar chart highlighting gender disparities, the contest's history is a testament to its evolution and adaptability. As we look back, we see both the dominance of male champions and the emergence of female competitors, symbolizing the event's dynamic nature and its potential to continue evolving, ultimately reminding us of its enduring status as an iconic American tradition.</p>
+    </section>
+
+    <section>
+        <h2>Sources</h2>
+
+    </section>
+    
+</body>
